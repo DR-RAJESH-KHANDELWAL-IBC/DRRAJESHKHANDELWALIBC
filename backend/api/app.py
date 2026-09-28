@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from backend.api.supreme import router as supreme_router
 from backend.metadata import get_backend_metadata
 from backend.api.hub import router as hub_router
+from backend.api.repositories import router as repositories_router
 
 
 app = FastAPI(
@@ -22,6 +23,7 @@ app = FastAPI(
 # Register Supreme API
 app.include_router(supreme_router)
 app.include_router(hub_router)
+app.include_router(repositories_router)
 
 
 @app.get("/")

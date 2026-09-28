@@ -1,0 +1,14 @@
+"""
+👑 DR RAJESH KHANDELWAL IBC 👑
+Backend constants for the Supreme Admin Owner system.
+"""
+
+BACKEND_NAME = "👑 DR RAJESH KHANDELWAL IBC 👑"
+BACKEND_VERSION = "1.0.0"
+BACKEND_STATUS = "active"
+
+DEFAULT_ROLE_STATUS = "active"
+
+ROLE_SUPREME = "SUPREME"
+ROLE_ADMIN = "ADMIN"
+ROLE_OWNER = "OWNER"

@@ -13,6 +13,24 @@ from flask import (
 
 
 # ============================================================
+# 👑 DR RAJESH KHANDELWAL IBC 👑
+# ============================================================
+#
+# Main Flask application.
+#
+# This repository is connected to:
+# SUPREMESETUHUB
+#
+# HOME PAGE is received LIVE from SUPREMESETUHUB.
+#
+# No local HTML duplication.
+# No local CSS duplication.
+# No local frontend copy.
+#
+# ============================================================
+
+
+# ============================================================
 # APPLICATION
 # ============================================================
 
@@ -32,15 +50,13 @@ SUPREME_API_URL = (
 # SUPREME CENTRAL FRONTEND
 # ============================================================
 #
-# No HTML/CSS duplication.
-#
-# Frontend source:
-#
 # SUPREMESETUHUB
 #       ↓
-# frontend/supreme/index.html
-#
-# This repository receives the frontend live.
+# /api/v1/frontend/supreme
+#       ↓
+# LIVE HOME PAGE
+#       ↓
+# DR RAJESH KHANDELWAL IBC
 #
 # ============================================================
 
@@ -57,13 +73,19 @@ SUPREME_FRONTEND_URL = (
 @app.after_request
 def after_request(response):
 
-    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers[
+        "Access-Control-Allow-Origin"
+    ] = "*"
 
-    response.headers["Access-Control-Allow-Headers"] = (
+    response.headers[
+        "Access-Control-Allow-Headers"
+    ] = (
         "Content-Type,Authorization"
     )
 
-    response.headers["Access-Control-Allow-Methods"] = (
+    response.headers[
+        "Access-Control-Allow-Methods"
+    ] = (
         "GET,PUT,POST,DELETE,OPTIONS"
     )
 
@@ -74,9 +96,14 @@ def after_request(response):
 # HOME PAGE
 # ============================================================
 #
-# Live frontend comes directly from SUPREMESETUHUB.
+# IMPORTANT:
 #
-# No local index.html.
+# The Home Page is NOT generated locally.
+#
+# It is fetched directly from:
+#
+# SUPREMESETUHUB
+# /api/v1/frontend/supreme
 #
 # ============================================================
 
@@ -87,7 +114,7 @@ def root():
 
         response = requests.get(
             SUPREME_FRONTEND_URL,
-            timeout=30,
+            timeout=20,
         )
 
         return Response(
@@ -103,10 +130,8 @@ def root():
 
         return jsonify({
 
-            "success": False,
-
             "error": (
-                "SUPREME_FRONTEND_UNAVAILABLE"
+                "SUPREME frontend unavailable"
             ),
 
             "message": str(exc),
@@ -119,119 +144,6 @@ def root():
 
 
 # ============================================================
-# SUPREME FRONTEND ASSETS
-# ============================================================
-#
-# The HTML can request CSS / JS / images.
-#
-# These are also served from SUPREMESETUHUB.
-#
-# ============================================================
-
-def proxy_frontend_asset(
-    asset_path: str,
-):
-
-    asset_url = (
-        SUPREME_API_URL.rstrip("/")
-        + "/"
-        + asset_path.lstrip("/")
-    )
-
-    try:
-
-        response = requests.get(
-            asset_url,
-            timeout=30,
-        )
-
-        return Response(
-            response.content,
-            status=response.status_code,
-            content_type=response.headers.get(
-                "Content-Type",
-                "application/octet-stream",
-            ),
-        )
-
-    except requests.RequestException as exc:
-
-        return jsonify({
-
-            "success": False,
-
-            "error": (
-                "SUPREME_ASSET_UNAVAILABLE"
-            ),
-
-            "message": str(exc),
-
-            "asset": asset_path,
-
-        }), 502
-
-
-# ============================================================
-# CSS
-# ============================================================
-
-@app.get("/style.css")
-def style_css():
-
-    return proxy_frontend_asset(
-        "style.css"
-    )
-
-
-# ============================================================
-# JAVASCRIPT
-# ============================================================
-
-@app.get("/script.js")
-def script_js():
-
-    return proxy_frontend_asset(
-        "script.js"
-    )
-
-
-# ============================================================
-# IMAGES
-# ============================================================
-
-@app.get("/images/<path:filename>")
-def images(filename: str):
-
-    return proxy_frontend_asset(
-        "images/" + filename
-    )
-
-
-# ============================================================
-# ASSETS
-# ============================================================
-
-@app.get("/assets/<path:filename>")
-def assets(filename: str):
-
-    return proxy_frontend_asset(
-        "assets/" + filename
-    )
-
-
-# ============================================================
-# FAVICON
-# ============================================================
-
-@app.get("/favicon.ico")
-def favicon():
-
-    return proxy_frontend_asset(
-        "favicon.ico"
-    )
-
-
-# ============================================================
 # HEALTH
 # ============================================================
 
@@ -240,7 +152,9 @@ def health():
 
     return jsonify({
 
-        "service": "RAJESHKHANDELWAL",
+        "service": (
+            "DR RAJESH KHANDELWAL IBC"
+        ),
 
         "status": "healthy",
 
@@ -259,9 +173,7 @@ def health():
 # SUPREME BRIDGE
 # ============================================================
 
-def call_supreme(
-    endpoint: str,
-):
+def call_supreme(endpoint: str):
 
     url = (
         SUPREME_API_URL.rstrip("/")
@@ -332,7 +244,9 @@ def bridge_status():
 
     return jsonify({
 
-        "service": "RAJESHKHANDELWAL",
+        "service": (
+            "DR RAJESH KHANDELWAL IBC"
+        ),
 
         "status": (
             "healthy"
@@ -358,7 +272,9 @@ def bridge_profile():
 
     return jsonify({
 
-        "service": "RAJESHKHANDELWAL",
+        "service": (
+            "DR RAJESH KHANDELWAL IBC"
+        ),
 
         "status": (
             "healthy"
@@ -387,7 +303,9 @@ def bridge_search():
 
         return jsonify({
 
-            "error": "Missing q parameter",
+            "error": (
+                "Missing q parameter"
+            ),
 
         }), 400
 
@@ -403,7 +321,9 @@ def bridge_search():
 
     return jsonify({
 
-        "service": "RAJESHKHANDELWAL",
+        "service": (
+            "DR RAJESH KHANDELWAL IBC"
+        ),
 
         "status": (
             "healthy"
@@ -417,7 +337,7 @@ def bridge_search():
 
 
 # ============================================================
-# 404
+# 404 ERROR
 # ============================================================
 
 @app.errorhandler(404)
@@ -425,9 +345,7 @@ def not_found(error):
 
     return jsonify({
 
-        "success": False,
-
-        "error": "NOT_FOUND",
+        "error": "Not found",
 
         "message": (
             "The requested endpoint "
@@ -438,7 +356,7 @@ def not_found(error):
 
 
 # ============================================================
-# 500
+# 500 ERROR
 # ============================================================
 
 @app.errorhandler(500)
@@ -446,9 +364,7 @@ def server_error(error):
 
     return jsonify({
 
-        "success": False,
-
-        "error": "SERVER_ERROR",
+        "error": "Server error",
 
         "message": (
             "Internal server error"

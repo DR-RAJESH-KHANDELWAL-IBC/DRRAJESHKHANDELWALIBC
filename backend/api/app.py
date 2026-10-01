@@ -1,62 +1,31 @@
-"""
-👑 DR RAJESH KHANDELWAL IBC 👑
-
-Main FastAPI application.
-
-SUPREME + ADMIN + OWNER
-
-Central Hub:
-SUPREMESETUHUB
-
-Architecture:
-DRRAJESHKHANDELWALIBC
-        ↓
-SUPREMESETUHUB
-        ↓
-CENTRAL FRONTEND
-        ↓
-HTML + CSS + JS + IMAGES + ASSETS
-"""
-
 from __future__ import annotations
 
-import os
-from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import quote
 
 import requests
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import (
+from flask import (
+    Flask,
+    jsonify,
+    request,
     Response,
-    JSONResponse,
 )
-
-from backend.api.supreme import router as supreme_router
-from backend.api.hub import router as hub_router
-from backend.api.repositories import router as repositories_router
-from backend.metadata import get_backend_metadata
 
 
 # ============================================================
 # APPLICATION
 # ============================================================
 
-app = FastAPI(
-    title="👑 DR RAJESH KHANDELWAL IBC 👑",
-    description="SUPREME ADMIN OWNER API",
-    version="1.0.0",
-)
+app = Flask(__name__)
 
 
 # ============================================================
-# SUPREME CENTRAL API
+# SUPREME CENTRAL HUB
 # ============================================================
 
 SUPREME_API_URL = (
     "https://supremesetuhub-3v4e.onrender.com"
-).rstrip("/")
+)
 
 
 # ============================================================
@@ -70,186 +39,109 @@ SUPREME_FRONTEND_URL = (
 
 
 # ============================================================
-# SUPREME FRONTEND ASSET BASE
-# ============================================================
-#
-# Central frontend:
-#
-# SUPREMESETUHUB
-#     ↓
-# frontend/supreme/
-#     ├── index.html
-#     ├── style.css
-#     ├── script.js
-#     └── assets/
-#
-# ============================================================
-
-SUPREME_FRONTEND_BASE = (
-    SUPREME_API_URL
-    + "/api/v1/frontend/supreme/"
-)
-
-
-# ============================================================
 # CORS
 # ============================================================
 
-ALLOWED_ORIGINS = [
-    # GitHub Pages
-    "https://rajeshkhandelwal.github.io",
-    "https://rajeshkhandelwalofficial.github.io",
-    "https://drrajeshkhandelwalibc.github.io",
-    "https://drrajeshkhandelwalibcofficial.github.io",
+@app.after_request
+def after_request(response):
 
-    # Main Domains
-    "https://rajeshkhandelwal.com",
-    "https://www.rajeshkhandelwal.com",
+    response.headers["Access-Control-Allow-Origin"] = "*"
 
-    "https://rajeshkhandelwalofficial.com",
-    "https://www.rajeshkhandelwalofficial.com",
+    response.headers["Access-Control-Allow-Headers"] = (
+        "Content-Type,Authorization"
+    )
 
-    "https://drrajeshkhandelwalibc.com",
-    "https://www.drrajeshkhandelwalibc.com",
+    response.headers["Access-Control-Allow-Methods"] = (
+        "GET,PUT,POST,DELETE,OPTIONS"
+    )
 
-    "https://drrajeshkhandelwalibcofficial.com",
-    "https://www.drrajeshkhandelwalibcofficial.com",
-
-    # Render
-    "https://rajeshkhandelwal.onrender.com",
-    "https://rajeshkhandelwalofficial.onrender.com",
-    "https://drrajeshkhandelwalibc.onrender.com",
-    "https://drrajeshkhandelwalibcofficial.onrender.com",
-]
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    return response
 
 
 # ============================================================
-# ROUTERS
+# SUPREME FRONTEND REQUEST
 # ============================================================
 
-app.include_router(supreme_router)
-app.include_router(hub_router)
-app.include_router(repositories_router)
+def fetch_supreme_frontend(path: str):
 
-
-# ============================================================
-# HTTP CLIENT HELPERS
-# ============================================================
-
-def fetch_supreme(
-    url: str,
-    timeout: int = 30,
-) -> requests.Response:
+    url = (
+        SUPREME_API_URL.rstrip("/")
+        + path
+    )
 
     return requests.get(
         url,
-        timeout=timeout,
-        allow_redirects=True,
+        timeout=20,
     )
 
 
 # ============================================================
-# ROOT HOME PAGE
+# HOME PAGE
 # ============================================================
 #
-# IMPORTANT:
-#
-# This repository does NOT use its own local frontend.
-#
-# The live homepage comes from:
-#
+# CURRENT REPOSITORY
+#        ↓
 # SUPREMESETUHUB
-#       ↓
-# /api/v1/frontend/supreme
+#        ↓
+# frontend/supreme/index.html
 #
 # ============================================================
 
 @app.get("/")
-def home():
+def root():
 
     try:
 
-        response = fetch_supreme(
-            SUPREME_FRONTEND_URL,
-            timeout=30,
+        response = fetch_supreme_frontend(
+            "/api/v1/frontend/supreme"
         )
 
         return Response(
-            content=response.content,
-            status_code=response.status_code,
-            media_type="text/html",
-            headers={
-                "Cache-Control": "no-cache",
-            },
+            response.content,
+            status=response.status_code,
+            content_type=response.headers.get(
+                "Content-Type",
+                "text/html; charset=utf-8",
+            ),
         )
 
     except requests.RequestException as exc:
 
-        return JSONResponse(
-            status_code=502,
-            content={
-                "success": False,
-                "error": "SUPREME_FRONTEND_UNAVAILABLE",
-                "message": str(exc),
-                "central_hub": "SUPREMESETUHUB",
-                "frontend_source": SUPREME_FRONTEND_URL,
-            },
-        )
+        return jsonify({
+            "error": "SUPREME frontend unavailable",
+            "message": str(exc),
+            "frontend_source": SUPREME_FRONTEND_URL,
+        }), 502
 
 
 # ============================================================
 # SUPREME FRONTEND CSS
 # ============================================================
-#
-# /style.css
-#      ↓
-# SUPREMESETUHUB/style.css
-#
-# ============================================================
 
 @app.get("/style.css")
-def supreme_style_css():
-
-    css_url = (
-        SUPREME_FRONTEND_BASE
-        + "style.css"
-    )
+def style_css():
 
     try:
 
-        response = fetch_supreme(
-            css_url,
-            timeout=30,
+        response = fetch_supreme_frontend(
+            "/api/v1/frontend/supreme/style.css"
         )
 
         return Response(
-            content=response.content,
-            status_code=response.status_code,
-            media_type="text/css",
-            headers={
-                "Cache-Control": "no-cache",
-            },
+            response.content,
+            status=response.status_code,
+            content_type=response.headers.get(
+                "Content-Type",
+                "text/css",
+            ),
         )
 
     except requests.RequestException as exc:
 
-        return JSONResponse(
-            status_code=502,
-            content={
-                "success": False,
-                "error": "SUPREME_CSS_UNAVAILABLE",
-                "message": str(exc),
-            },
-        )
+        return jsonify({
+            "error": "SUPREME CSS unavailable",
+            "message": str(exc),
+        }), 502
 
 
 # ============================================================
@@ -257,103 +149,95 @@ def supreme_style_css():
 # ============================================================
 
 @app.get("/script.js")
-def supreme_script_js():
-
-    js_url = (
-        SUPREME_FRONTEND_BASE
-        + "script.js"
-    )
+def script_js():
 
     try:
 
-        response = fetch_supreme(
-            js_url,
-            timeout=30,
+        response = fetch_supreme_frontend(
+            "/api/v1/frontend/supreme/script.js"
         )
 
         return Response(
-            content=response.content,
-            status_code=response.status_code,
-            media_type="application/javascript",
-            headers={
-                "Cache-Control": "no-cache",
-            },
+            response.content,
+            status=response.status_code,
+            content_type=response.headers.get(
+                "Content-Type",
+                "application/javascript",
+            ),
         )
 
     except requests.RequestException as exc:
 
-        return JSONResponse(
-            status_code=502,
-            content={
-                "success": False,
-                "error": "SUPREME_JS_UNAVAILABLE",
-                "message": str(exc),
-            },
-        )
+        return jsonify({
+            "error": "SUPREME JavaScript unavailable",
+            "message": str(exc),
+        }), 502
+
+
+# ============================================================
+# SUPREME FRONTEND IMAGES
+# ============================================================
+
+@app.get("/images/<path:filename>")
+def images(filename: str):
+
+    return frontend_asset(
+        "/api/v1/frontend/supreme/images/"
+        + filename
+    )
 
 
 # ============================================================
 # SUPREME FRONTEND ASSETS
 # ============================================================
-#
-# Examples:
-#
-# /assets/logo.png
-# /images/banner.jpg
-# /icons/icon.svg
-#
-# Everything is requested from SUPREMESETUHUB.
-#
+
+@app.get("/assets/<path:filename>")
+def assets(filename: str):
+
+    return frontend_asset(
+        "/api/v1/frontend/supreme/assets/"
+        + filename
+    )
+
+
+# ============================================================
+# FAVICON
 # ============================================================
 
-@app.get("/assets/{asset_path:path}")
-@app.get("/images/{asset_path:path}")
-@app.get("/icons/{asset_path:path}")
-@app.get("/fonts/{asset_path:path}")
-def supreme_assets(
-    asset_path: str,
-    request: Request,
-):
+@app.get("/favicon.ico")
+def favicon():
 
-    current_path = request.url.path.lstrip("/")
-
-    asset_url = urljoin(
-        SUPREME_FRONTEND_BASE,
-        current_path,
+    return frontend_asset(
+        "/api/v1/frontend/supreme/favicon.ico"
     )
+
+
+# ============================================================
+# GENERIC FRONTEND ASSET
+# ============================================================
+
+def frontend_asset(path: str):
 
     try:
 
-        response = fetch_supreme(
-            asset_url,
-            timeout=30,
-        )
-
-        content_type = response.headers.get(
-            "Content-Type",
-            "application/octet-stream",
-        )
+        response = fetch_supreme_frontend(path)
 
         return Response(
-            content=response.content,
-            status_code=response.status_code,
-            media_type=content_type.split(";")[0],
-            headers={
-                "Cache-Control": "no-cache",
-            },
+            response.content,
+            status=response.status_code,
+            content_type=response.headers.get(
+                "Content-Type",
+                "application/octet-stream",
+            ),
         )
 
     except requests.RequestException as exc:
 
-        return JSONResponse(
-            status_code=502,
-            content={
-                "success": False,
-                "error": "SUPREME_ASSET_UNAVAILABLE",
-                "message": str(exc),
-                "asset": current_path,
-            },
-        )
+        return jsonify({
+            "error": "SUPREME frontend asset unavailable",
+            "message": str(exc),
+            "path": path,
+        }), 502
 
 
 # ============================================================
@@ -361,168 +245,206 @@ def supreme_assets(
 # ============================================================
 
 @app.get("/health")
-def health_check():
+def health():
 
-    return {
-        "success": True,
+    return jsonify({
+
+        "service": "RAJESHKHANDELWAL",
+
         "status": "healthy",
-        "repository": "DRRAJESHKHANDELWALIBC",
-        "central_hub": "SUPREMESETUHUB",
-        "frontend_source": SUPREME_FRONTEND_URL,
-        "architecture": "SUPREME CENTRAL FRONTEND",
-    }
+
+        "frontend_source": (
+            SUPREME_FRONTEND_URL
+        ),
+
+        "architecture": (
+            "SUPREME CENTRAL FRONTEND"
+        ),
+
+    }), 200
 
 
 # ============================================================
-# METADATA
+# SUPREME BRIDGE
 # ============================================================
 
-@app.get("/metadata")
-def metadata():
+def call_supreme(endpoint: str):
 
-    return get_backend_metadata()
-
-
-# ============================================================
-# API STATUS
-# ============================================================
-
-@app.get("/api/status")
-def api_status():
-
-    return {
-        "success": True,
-        "service": "DR RAJESH KHANDELWAL IBC",
-        "repository": "DRRAJESHKHANDELWALIBC",
-        "central_hub": "SUPREMESETUHUB",
-        "status": "active",
-        "api": "online",
-        "frontend": "central",
-    }
-
-
-# ============================================================
-# SUPREME CONNECTION STATUS
-# ============================================================
-
-@app.get("/supreme/connection")
-def supreme_connection():
-
-    try:
-
-        response = fetch_supreme(
-            SUPREME_API_URL
-            + "/health",
-            timeout=15,
-        )
-
-        try:
-            upstream = response.json()
-        except ValueError:
-            upstream = {
-                "status_code": response.status_code,
-                "response": response.text[:500],
-            }
-
-        return {
-            "success": response.status_code == 200,
-            "repository": "DRRAJESHKHANDELWALIBC",
-            "connected_to": "SUPREMESETUHUB",
-            "central_api": SUPREME_API_URL,
-            "central_frontend": SUPREME_FRONTEND_URL,
-            "upstream": upstream,
-        }
-
-    except requests.RequestException as exc:
-
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "error": "SUPREME_CONNECTION_FAILED",
-                "message": str(exc),
-                "central_hub": "SUPREMESETUHUB",
-            },
-        )
-
-
-# ============================================================
-# FALLBACK FRONTEND ROUTES
-# ============================================================
-#
-# This handles additional frontend files if required.
-#
-# Example:
-#
-# /favicon.ico
-# /manifest.json
-# /robots.txt
-#
-# ============================================================
-
-@app.get(
-    "/{filename:path}",
-    include_in_schema=False,
-)
-def frontend_fallback(
-    filename: str,
-):
-
-    # Never intercept API routes.
-    if (
-        filename.startswith("api/")
-        or filename.startswith("supreme/")
-        or filename == "health"
-        or filename == "metadata"
-    ):
-        raise HTTPException(
-            status_code=404,
-            detail="NOT_FOUND",
-        )
-
-    requested_url = urljoin(
-        SUPREME_FRONTEND_BASE,
-        filename,
+    url = (
+        SUPREME_API_URL.rstrip("/")
+        + endpoint
     )
 
     try:
 
-        response = fetch_supreme(
-            requested_url,
-            timeout=30,
+        response = requests.get(
+            url,
+            timeout=15,
         )
 
-        if response.status_code >= 400:
+        try:
 
-            raise HTTPException(
-                status_code=response.status_code,
-                detail="RESOURCE_NOT_FOUND",
-            )
+            payload = response.json()
 
-        content_type = response.headers.get(
-            "Content-Type",
-            "application/octet-stream",
-        )
+        except ValueError:
 
-        return Response(
-            content=response.content,
-            status_code=response.status_code,
-            media_type=content_type.split(";")[0],
-            headers={
-                "Cache-Control": "no-cache",
-            },
+            payload = {
+                "error": (
+                    "SUPREME returned "
+                    "a non-JSON response"
+                ),
+                "status_code": (
+                    response.status_code
+                ),
+                "text": response.text[:1000],
+            }
+
+        return (
+            response.status_code,
+            payload,
         )
 
     except requests.RequestException as exc:
 
-        return JSONResponse(
-            status_code=502,
-            content={
-                "success": False,
-                "error": "SUPREME_RESOURCE_UNAVAILABLE",
-                "message": str(exc),
-                "resource": filename,
+        return (
+            500,
+            {
+                "error": str(exc),
+                "upstream": SUPREME_API_URL,
             },
         )
+
+
+# ============================================================
+# SUPREME STATUS
+# ============================================================
+
+@app.get("/supreme/bridge/status")
+def bridge_status():
+
+    status_code, payload = call_supreme(
+        "/supreme/status"
+    )
+
+    return jsonify({
+
+        "service": "RAJESHKHANDELWAL",
+
+        "status": (
+            "healthy"
+            if status_code == 200
+            else "bridge_error"
+        ),
+
+        "upstream": payload,
+
+    }), status_code
+
+
+# ============================================================
+# SUPREME PROFILE
+# ============================================================
+
+@app.get("/supreme/bridge/profile")
+def bridge_profile():
+
+    status_code, payload = call_supreme(
+        "/supreme/profile"
+    )
+
+    return jsonify({
+
+        "service": "RAJESHKHANDELWAL",
+
+        "status": (
+            "healthy"
+            if status_code == 200
+            else "bridge_error"
+        ),
+
+        "profile": payload,
+
+    }), status_code
+
+
+# ============================================================
+# SUPREME SEARCH
+# ============================================================
+
+@app.get("/supreme/bridge/search")
+def bridge_search():
+
+    query = request.args.get(
+        "q",
+        "",
+    ).strip()
+
+    if not query:
+
+        return jsonify({
+            "error": "Missing q parameter",
+        }), 400
+
+    encoded_query = quote(
+        query,
+        safe="",
+    )
+
+    status_code, payload = call_supreme(
+        "/supreme/search?q="
+        + encoded_query
+    )
+
+    return jsonify({
+
+        "service": "RAJESHKHANDELWAL",
+
+        "status": (
+            "healthy"
+            if status_code == 200
+            else "bridge_error"
+        ),
+
+        "results": payload,
+
+    }), status_code
+
+
+# ============================================================
+# 404
+# ============================================================
+
+@app.errorhandler(404)
+def not_found(error):
+
+    return jsonify({
+
+        "error": "Not found",
+
+        "message": (
+            "The requested endpoint "
+            "does not exist"
+        ),
+
+    }), 404
+
+
+# ============================================================
+# 500
+# ============================================================
+
+@app.errorhandler(500)
+def server_error(error):
+
+    return jsonify({
+
+        "error": "Server error",
+
+        "message": (
+            "Internal server error"
+        ),
+
+    }), 500
 
 
 # ============================================================
@@ -531,7 +453,7 @@ def frontend_fallback(
 
 if __name__ == "__main__":
 
-    import uvicorn
+    import os
 
     port = int(
         os.getenv(
@@ -540,8 +462,8 @@ if __name__ == "__main__":
         )
     )
 
-    uvicorn.run(
-        app,
+    app.run(
         host="0.0.0.0",
         port=port,
+        debug=False,
     )

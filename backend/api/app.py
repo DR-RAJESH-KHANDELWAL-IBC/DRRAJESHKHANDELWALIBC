@@ -8,11 +8,15 @@ Central Hub:
 SUPREMESETUHUB
 """
 
-from pathlib import Path
+from __future__ import annotations
 
-from fastapi import FastAPI
+from typing import Optional
+
+import httpx
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 
 from backend.api.supreme import router as supreme_router
 from backend.api.hub import router as hub_router
@@ -32,10 +36,21 @@ app = FastAPI(
 
 
 # ============================================================
+# SUPREMESETUHUB
+# CENTRAL FRONTEND + API SOURCE
+# ============================================================
+
+SUPREMESETUHUB_URL = (
+    "https://supremesetuhub-3v4e.onrender.com"
+)
+
+
+# ============================================================
 # CORS
 # ============================================================
 
 ALLOWED_ORIGINS = [
+
     # GitHub Pages
     "https://rajeshkhandelwal.github.io",
     "https://rajeshkhandelwalofficial.github.io",
@@ -60,6 +75,9 @@ ALLOWED_ORIGINS = [
     "https://rajeshkhandelwalofficial.onrender.com",
     "https://drrajeshkhandelwalibc.onrender.com",
     "https://drrajeshkhandelwalibcofficial.onrender.com",
+
+    # Current Render service
+    "https://drrajeshkhandelwalibc-vbmq.onrender.com",
 ]
 
 
@@ -93,58 +111,123 @@ app.include_router(
 
 
 # ============================================================
-# FRONTEND
-# ============================================================
-#
-# IMPORTANT:
-#
-# Frontend content is NOT copied from SUPREMESETUHUB.
-#
-# This repository only serves its own frontend/index.html
-# if that file exists.
-#
+# SUPREME FRONTEND PROXY
 # ============================================================
 
-BASE_DIR = Path(__file__).resolve().parents[2]
+async def fetch_supreme_frontend(
+    path: str = "",
+):
+    """
+    Fetch frontend content directly from SUPREMESETUHUB.
 
-FRONTEND_DIR = (
-    BASE_DIR
-    / "frontend"
-)
+    No HTML/CSS/JS is copied into this repository.
+    SUPREMESETUHUB remains the central source.
+    """
 
-FRONTEND_INDEX = (
-    FRONTEND_DIR
-    / "index.html"
-)
+    clean_path = path.lstrip("/")
+
+    if clean_path:
+        target_url = (
+            SUPREMESETUHUB_URL.rstrip("/")
+            + "/"
+            + clean_path
+        )
+    else:
+        target_url = (
+            SUPREMESETUHUB_URL.rstrip("/")
+            + "/"
+        )
+
+    try:
+
+        async with httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=30.0,
+        ) as client:
+
+            response = await client.get(
+                target_url
+            )
+
+        content_type = response.headers.get(
+            "content-type",
+            "text/html; charset=utf-8",
+        )
+
+        return Response(
+            content=response.content,
+            status_code=response.status_code,
+            media_type=content_type.split(";")[0],
+        )
+
+    except httpx.RequestError as exc:
+
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "SUPREMESETUHUB_UNAVAILABLE",
+                "message": str(exc),
+                "upstream": target_url,
+            },
+        )
 
 
 # ============================================================
-# ROOT
+# HOME PAGE
 # ============================================================
 
 @app.get("/")
-def home():
+async def home():
 
-    # If this repository has its own frontend,
-    # serve it directly.
+    return await fetch_supreme_frontend()
 
-    if FRONTEND_INDEX.is_file():
 
-        return FileResponse(
-            FRONTEND_INDEX,
-            media_type="text/html",
-        )
+# ============================================================
+# SUPREME FRONTEND ASSETS
+# ============================================================
+#
+# Examples:
+#
+# /style.css
+# /script.js
+# /images/logo.png
+# /assets/...
+#
+# These are requested from SUPREMESETUHUB.
+#
+# Nothing is copied locally.
+# ============================================================
 
-    # Otherwise return API information.
-    return {
-        "success": True,
-        "message": "Welcome to DR RAJESH KHANDELWAL IBC",
-        "display_name": "👑 DR RAJESH KHANDELWAL IBC 👑",
-        "repository": "DRRAJESHKHANDELWALIBC",
-        "central_hub": "SUPREMESETUHUB",
-        "status": "active",
-        "frontend": "not_found",
-    }
+@app.get("/style.css")
+async def supreme_style_css():
+
+    return await fetch_supreme_frontend(
+        "style.css"
+    )
+
+
+@app.get("/script.js")
+async def supreme_script_js():
+
+    return await fetch_supreme_frontend(
+        "script.js"
+    )
+
+
+@app.get("/images/{path:path}")
+async def supreme_images(path: str):
+
+    return await fetch_supreme_frontend(
+        f"images/{path}"
+    )
+
+
+@app.get("/assets/{path:path}")
+async def supreme_assets(path: str):
+
+    return await fetch_supreme_frontend(
+        f"assets/{path}"
+    )
 
 
 # ============================================================
@@ -159,6 +242,7 @@ def health_check():
         "status": "healthy",
         "repository": "DRRAJESHKHANDELWALIBC",
         "central_hub": "SUPREMESETUHUB",
+        "frontend_source": SUPREMESETUHUB_URL,
     }
 
 
@@ -186,40 +270,46 @@ def api_status():
         "central_hub": "SUPREMESETUHUB",
         "status": "active",
         "api": "online",
+        "frontend": "connected",
     }
 
 
 # ============================================================
-# FRONTEND STATIC FILES
+# SUPREME FRONTEND FALLBACK
 # ============================================================
 #
-# This allows:
+# Any additional frontend file requested by the browser
+# will be fetched from SUPREMESETUHUB.
 #
-# /style.css
-# /script.js
-# /images/...
-#
-# to be served from this repository's frontend folder.
-#
+# API routes above remain protected because FastAPI checks
+# the more specific routes first.
 # ============================================================
 
-@app.get("/{filename:path}")
-def frontend_files(filename: str):
+@app.get("/{frontend_path:path}")
+async def frontend_proxy(
+    frontend_path: str,
+):
 
-    requested_file = (
-        FRONTEND_DIR
-        / filename
+    # Do not proxy API/system endpoints as frontend assets.
+
+    protected_paths = (
+        "api/",
+        "health",
+        "metadata",
+        "docs",
+        "redoc",
+        "openapi.json",
     )
 
-    if requested_file.is_file():
+    if frontend_path.startswith(
+        protected_paths
+    ):
 
-        return FileResponse(
-            requested_file
+        raise HTTPException(
+            status_code=404,
+            detail="Endpoint not found",
         )
 
-    return {
-        "success": False,
-        "error": "NOT_FOUND",
-        "message": "The requested resource does not exist",
-        "path": filename,
-    }
+    return await fetch_supreme_frontend(
+        frontend_path
+    )

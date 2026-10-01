@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from urllib.parse import quote
 
 import requests
@@ -10,24 +11,6 @@ from flask import (
     request,
     Response,
 )
-
-
-# ============================================================
-# 👑 DR RAJESH KHANDELWAL IBC 👑
-# ============================================================
-#
-# Main Flask application.
-#
-# This repository is connected to:
-# SUPREMESETUHUB
-#
-# HOME PAGE is received LIVE from SUPREMESETUHUB.
-#
-# No local HTML duplication.
-# No local CSS duplication.
-# No local frontend copy.
-#
-# ============================================================
 
 
 # ============================================================
@@ -50,18 +33,18 @@ SUPREME_API_URL = (
 # SUPREME CENTRAL FRONTEND
 # ============================================================
 #
+# FRONTEND IS NOT DUPLICATED IN THIS REPOSITORY.
+#
+# This repository receives the live frontend from:
+#
 # SUPREMESETUHUB
-#       ↓
+#        ↓
 # /api/v1/frontend/supreme
-#       ↓
-# LIVE HOME PAGE
-#       ↓
-# DR RAJESH KHANDELWAL IBC
 #
 # ============================================================
 
 SUPREME_FRONTEND_URL = (
-    SUPREME_API_URL
+    SUPREME_API_URL.rstrip("/")
     + "/api/v1/frontend/supreme"
 )
 
@@ -73,19 +56,13 @@ SUPREME_FRONTEND_URL = (
 @app.after_request
 def after_request(response):
 
-    response.headers[
-        "Access-Control-Allow-Origin"
-    ] = "*"
+    response.headers["Access-Control-Allow-Origin"] = "*"
 
-    response.headers[
-        "Access-Control-Allow-Headers"
-    ] = (
+    response.headers["Access-Control-Allow-Headers"] = (
         "Content-Type,Authorization"
     )
 
-    response.headers[
-        "Access-Control-Allow-Methods"
-    ] = (
+    response.headers["Access-Control-Allow-Methods"] = (
         "GET,PUT,POST,DELETE,OPTIONS"
     )
 
@@ -98,12 +75,11 @@ def after_request(response):
 #
 # IMPORTANT:
 #
-# The Home Page is NOT generated locally.
+# The home page is fetched LIVE from SUPREMESETUHUB.
 #
-# It is fetched directly from:
-#
-# SUPREMESETUHUB
-# /api/v1/frontend/supreme
+# No local index.html is required.
+# No HTML duplication.
+# No CSS duplication.
 #
 # ============================================================
 
@@ -114,33 +90,33 @@ def root():
 
         response = requests.get(
             SUPREME_FRONTEND_URL,
-            timeout=20,
+            timeout=30,
+            allow_redirects=True,
+        )
+
+        content_type = response.headers.get(
+            "Content-Type",
+            "text/html; charset=utf-8",
         )
 
         return Response(
             response.content,
             status=response.status_code,
-            content_type=response.headers.get(
-                "Content-Type",
-                "text/html; charset=utf-8",
-            ),
+            content_type=content_type,
         )
 
     except requests.RequestException as exc:
 
-        return jsonify({
-
-            "error": (
-                "SUPREME frontend unavailable"
-            ),
-
-            "message": str(exc),
-
-            "supreme_frontend": (
-                SUPREME_FRONTEND_URL
-            ),
-
-        }), 502
+        return jsonify(
+            {
+                "success": False,
+                "error": "SUPREME_FRONTEND_UNAVAILABLE",
+                "message": str(exc),
+                "service": "DRRAJESHKHANDELWAL",
+                "supreme_api": SUPREME_API_URL,
+                "supreme_frontend": SUPREME_FRONTEND_URL,
+            }
+        ), 502
 
 
 # ============================================================
@@ -150,23 +126,16 @@ def root():
 @app.get("/health")
 def health():
 
-    return jsonify({
-
-        "service": (
-            "DR RAJESH KHANDELWAL IBC"
-        ),
-
-        "status": "healthy",
-
-        "frontend_source": (
-            SUPREME_FRONTEND_URL
-        ),
-
-        "architecture": (
-            "SUPREME CENTRAL FRONTEND"
-        ),
-
-    }), 200
+    return jsonify(
+        {
+            "success": True,
+            "service": "RAJESHKHANDELWAL",
+            "status": "healthy",
+            "frontend_source": SUPREME_FRONTEND_URL,
+            "architecture": "SUPREME CENTRAL FRONTEND",
+            "connected_to": "SUPREMESETUHUB",
+        }
+    ), 200
 
 
 # ============================================================
@@ -184,7 +153,7 @@ def call_supreme(endpoint: str):
 
         response = requests.get(
             url,
-            timeout=15,
+            timeout=20,
         )
 
         try:
@@ -194,20 +163,12 @@ def call_supreme(endpoint: str):
         except ValueError:
 
             payload = {
-
                 "error": (
                     "SUPREME returned "
                     "a non-JSON response"
                 ),
-
-                "status_code": (
-                    response.status_code
-                ),
-
-                "text": (
-                    response.text[:1000]
-                ),
-
+                "status_code": response.status_code,
+                "text": response.text[:1000],
             }
 
         return (
@@ -220,13 +181,8 @@ def call_supreme(endpoint: str):
         return (
             500,
             {
-
                 "error": str(exc),
-
-                "upstream": (
-                    SUPREME_API_URL
-                ),
-
+                "upstream": SUPREME_API_URL,
             },
         )
 
@@ -242,21 +198,17 @@ def bridge_status():
         "/supreme/status"
     )
 
-    return jsonify({
-
-        "service": (
-            "DR RAJESH KHANDELWAL IBC"
-        ),
-
-        "status": (
-            "healthy"
-            if status_code == 200
-            else "bridge_error"
-        ),
-
-        "upstream": payload,
-
-    }), status_code
+    return jsonify(
+        {
+            "service": "RAJESHKHANDELWAL",
+            "status": (
+                "healthy"
+                if status_code == 200
+                else "bridge_error"
+            ),
+            "upstream": payload,
+        }
+    ), status_code
 
 
 # ============================================================
@@ -270,21 +222,17 @@ def bridge_profile():
         "/supreme/profile"
     )
 
-    return jsonify({
-
-        "service": (
-            "DR RAJESH KHANDELWAL IBC"
-        ),
-
-        "status": (
-            "healthy"
-            if status_code == 200
-            else "bridge_error"
-        ),
-
-        "profile": payload,
-
-    }), status_code
+    return jsonify(
+        {
+            "service": "RAJESHKHANDELWAL",
+            "status": (
+                "healthy"
+                if status_code == 200
+                else "bridge_error"
+            ),
+            "profile": payload,
+        }
+    ), status_code
 
 
 # ============================================================
@@ -301,13 +249,12 @@ def bridge_search():
 
     if not query:
 
-        return jsonify({
-
-            "error": (
-                "Missing q parameter"
-            ),
-
-        }), 400
+        return jsonify(
+            {
+                "success": False,
+                "error": "Missing q parameter",
+            }
+        ), 400
 
     encoded_query = quote(
         query,
@@ -319,21 +266,39 @@ def bridge_search():
         + encoded_query
     )
 
-    return jsonify({
+    return jsonify(
+        {
+            "service": "RAJESHKHANDELWAL",
+            "status": (
+                "healthy"
+                if status_code == 200
+                else "bridge_error"
+            ),
+            "results": payload,
+        }
+    ), status_code
 
-        "service": (
-            "DR RAJESH KHANDELWAL IBC"
-        ),
 
-        "status": (
-            "healthy"
-            if status_code == 200
-            else "bridge_error"
-        ),
+# ============================================================
+# CONNECTION STATUS
+# ============================================================
 
-        "results": payload,
+@app.get("/supreme/connection")
+def supreme_connection():
 
-    }), status_code
+    return jsonify(
+        {
+            "success": True,
+            "connected_to": "SUPREMESETUHUB",
+            "identity": "👑 DR RAJESH KHANDELWAL IBC 👑",
+            "message": (
+                "👑 DR RAJESH KHANDELWAL IBC 👑 "
+                "- Supreme Identity Profile 👑"
+            ),
+            "status": "ACTIVE",
+            "frontend": SUPREME_FRONTEND_URL,
+        }
+    ), 200
 
 
 # ============================================================
@@ -343,16 +308,16 @@ def bridge_search():
 @app.errorhandler(404)
 def not_found(error):
 
-    return jsonify({
-
-        "error": "Not found",
-
-        "message": (
-            "The requested endpoint "
-            "does not exist"
-        ),
-
-    }), 404
+    return jsonify(
+        {
+            "success": False,
+            "error": "NOT_FOUND",
+            "message": (
+                "The requested endpoint "
+                "does not exist"
+            ),
+        }
+    ), 404
 
 
 # ============================================================
@@ -362,15 +327,13 @@ def not_found(error):
 @app.errorhandler(500)
 def server_error(error):
 
-    return jsonify({
-
-        "error": "Server error",
-
-        "message": (
-            "Internal server error"
-        ),
-
-    }), 500
+    return jsonify(
+        {
+            "success": False,
+            "error": "SERVER_ERROR",
+            "message": "Internal server error",
+        }
+    ), 500
 
 
 # ============================================================
@@ -378,8 +341,6 @@ def server_error(error):
 # ============================================================
 
 if __name__ == "__main__":
-
-    import os
 
     port = int(
         os.getenv(

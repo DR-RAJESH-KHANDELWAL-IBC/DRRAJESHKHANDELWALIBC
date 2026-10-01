@@ -20,7 +20,7 @@ app = Flask(__name__)
 
 
 # ============================================================
-# SUPREME CENTRAL HUB
+# SUPREME CENTRAL API
 # ============================================================
 
 SUPREME_API_URL = (
@@ -30,6 +30,18 @@ SUPREME_API_URL = (
 
 # ============================================================
 # SUPREME CENTRAL FRONTEND
+# ============================================================
+#
+# No HTML/CSS duplication.
+#
+# Frontend source:
+#
+# SUPREMESETUHUB
+#       ↓
+# frontend/supreme/index.html
+#
+# This repository receives the frontend live.
+#
 # ============================================================
 
 SUPREME_FRONTEND_URL = (
@@ -59,31 +71,12 @@ def after_request(response):
 
 
 # ============================================================
-# SUPREME FRONTEND REQUEST
-# ============================================================
-
-def fetch_supreme_frontend(path: str):
-
-    url = (
-        SUPREME_API_URL.rstrip("/")
-        + path
-    )
-
-    return requests.get(
-        url,
-        timeout=20,
-    )
-
-
-# ============================================================
 # HOME PAGE
 # ============================================================
 #
-# CURRENT REPOSITORY
-#        ↓
-# SUPREMESETUHUB
-#        ↓
-# frontend/supreme/index.html
+# Live frontend comes directly from SUPREMESETUHUB.
+#
+# No local index.html.
 #
 # ============================================================
 
@@ -92,8 +85,9 @@ def root():
 
     try:
 
-        response = fetch_supreme_frontend(
-            "/api/v1/frontend/supreme"
+        response = requests.get(
+            SUPREME_FRONTEND_URL,
+            timeout=30,
         )
 
         return Response(
@@ -108,119 +102,48 @@ def root():
     except requests.RequestException as exc:
 
         return jsonify({
-            "error": "SUPREME frontend unavailable",
-            "message": str(exc),
-            "frontend_source": SUPREME_FRONTEND_URL,
-        }), 502
 
+            "success": False,
 
-# ============================================================
-# SUPREME FRONTEND CSS
-# ============================================================
-
-@app.get("/style.css")
-def style_css():
-
-    try:
-
-        response = fetch_supreme_frontend(
-            "/api/v1/frontend/supreme/style.css"
-        )
-
-        return Response(
-            response.content,
-            status=response.status_code,
-            content_type=response.headers.get(
-                "Content-Type",
-                "text/css",
+            "error": (
+                "SUPREME_FRONTEND_UNAVAILABLE"
             ),
-        )
 
-    except requests.RequestException as exc:
-
-        return jsonify({
-            "error": "SUPREME CSS unavailable",
             "message": str(exc),
-        }), 502
 
-
-# ============================================================
-# SUPREME FRONTEND JAVASCRIPT
-# ============================================================
-
-@app.get("/script.js")
-def script_js():
-
-    try:
-
-        response = fetch_supreme_frontend(
-            "/api/v1/frontend/supreme/script.js"
-        )
-
-        return Response(
-            response.content,
-            status=response.status_code,
-            content_type=response.headers.get(
-                "Content-Type",
-                "application/javascript",
+            "supreme_frontend": (
+                SUPREME_FRONTEND_URL
             ),
-        )
 
-    except requests.RequestException as exc:
-
-        return jsonify({
-            "error": "SUPREME JavaScript unavailable",
-            "message": str(exc),
         }), 502
-
-
-# ============================================================
-# SUPREME FRONTEND IMAGES
-# ============================================================
-
-@app.get("/images/<path:filename>")
-def images(filename: str):
-
-    return frontend_asset(
-        "/api/v1/frontend/supreme/images/"
-        + filename
-    )
 
 
 # ============================================================
 # SUPREME FRONTEND ASSETS
 # ============================================================
+#
+# The HTML can request CSS / JS / images.
+#
+# These are also served from SUPREMESETUHUB.
+#
+# ============================================================
 
-@app.get("/assets/<path:filename>")
-def assets(filename: str):
+def proxy_frontend_asset(
+    asset_path: str,
+):
 
-    return frontend_asset(
-        "/api/v1/frontend/supreme/assets/"
-        + filename
+    asset_url = (
+        SUPREME_API_URL.rstrip("/")
+        + "/"
+        + asset_path.lstrip("/")
     )
-
-
-# ============================================================
-# FAVICON
-# ============================================================
-
-@app.get("/favicon.ico")
-def favicon():
-
-    return frontend_asset(
-        "/api/v1/frontend/supreme/favicon.ico"
-    )
-
-
-# ============================================================
-# GENERIC FRONTEND ASSET
-# ============================================================
-
-def frontend_asset(path: str):
 
     try:
 
-        response = fetch_supreme_frontend(path)
+        response = requests.get(
+            asset_url,
+            timeout=30,
+        )
 
         return Response(
             response.content,
@@ -234,10 +157,78 @@ def frontend_asset(path: str):
     except requests.RequestException as exc:
 
         return jsonify({
-            "error": "SUPREME frontend asset unavailable",
+
+            "success": False,
+
+            "error": (
+                "SUPREME_ASSET_UNAVAILABLE"
+            ),
+
             "message": str(exc),
-            "path": path,
+
+            "asset": asset_path,
+
         }), 502
+
+
+# ============================================================
+# CSS
+# ============================================================
+
+@app.get("/style.css")
+def style_css():
+
+    return proxy_frontend_asset(
+        "style.css"
+    )
+
+
+# ============================================================
+# JAVASCRIPT
+# ============================================================
+
+@app.get("/script.js")
+def script_js():
+
+    return proxy_frontend_asset(
+        "script.js"
+    )
+
+
+# ============================================================
+# IMAGES
+# ============================================================
+
+@app.get("/images/<path:filename>")
+def images(filename: str):
+
+    return proxy_frontend_asset(
+        "images/" + filename
+    )
+
+
+# ============================================================
+# ASSETS
+# ============================================================
+
+@app.get("/assets/<path:filename>")
+def assets(filename: str):
+
+    return proxy_frontend_asset(
+        "assets/" + filename
+    )
+
+
+# ============================================================
+# FAVICON
+# ============================================================
+
+@app.get("/favicon.ico")
+def favicon():
+
+    return proxy_frontend_asset(
+        "favicon.ico"
+    )
 
 
 # ============================================================
@@ -268,7 +259,9 @@ def health():
 # SUPREME BRIDGE
 # ============================================================
 
-def call_supreme(endpoint: str):
+def call_supreme(
+    endpoint: str,
+):
 
     url = (
         SUPREME_API_URL.rstrip("/")
@@ -289,14 +282,20 @@ def call_supreme(endpoint: str):
         except ValueError:
 
             payload = {
+
                 "error": (
                     "SUPREME returned "
                     "a non-JSON response"
                 ),
+
                 "status_code": (
                     response.status_code
                 ),
-                "text": response.text[:1000],
+
+                "text": (
+                    response.text[:1000]
+                ),
+
             }
 
         return (
@@ -309,8 +308,13 @@ def call_supreme(endpoint: str):
         return (
             500,
             {
+
                 "error": str(exc),
-                "upstream": SUPREME_API_URL,
+
+                "upstream": (
+                    SUPREME_API_URL
+                ),
+
             },
         )
 
@@ -382,7 +386,9 @@ def bridge_search():
     if not query:
 
         return jsonify({
+
             "error": "Missing q parameter",
+
         }), 400
 
     encoded_query = quote(
@@ -419,7 +425,9 @@ def not_found(error):
 
     return jsonify({
 
-        "error": "Not found",
+        "success": False,
+
+        "error": "NOT_FOUND",
 
         "message": (
             "The requested endpoint "
@@ -438,7 +446,9 @@ def server_error(error):
 
     return jsonify({
 
-        "error": "Server error",
+        "success": False,
+
+        "error": "SERVER_ERROR",
 
         "message": (
             "Internal server error"
